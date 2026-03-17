@@ -1,0 +1,8 @@
+.DS_Store
+.vscode
+.idea
+.github
+*.pyc
+
+models
+train

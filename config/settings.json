@@ -1,0 +1,70 @@
+{
+    "app": {
+        "host": "0.0.0.0",
+        "port": 8999,
+        "cors_allow_origins": [
+            "*"
+        ]
+    },
+    "llm": {
+        "api_key": "",
+        "api_base": "https://api.openai.com/v1",
+        "model": "gpt-4o-mini",
+        "timeout_seconds": 45,
+        "prompt": {
+            "system_prompt": "你是一个简历信息抽取助手。请严格根据输入文本提取结构化信息，输出必须是 JSON。禁止臆造内容；没有信息就返回空字符串、空数组或空对象。",
+            "user_requirements": [
+                "1) 明确区分实习/工作经历与项目经历。",
+                "2) 每条经历要成组输出（名称、组织/角色、时间、内容）。",
+                "3) 获奖按条输出。",
+                "4) 缺失字段返回空值，不要猜测。"
+            ],
+            "output_schema": {
+                "basic_info": {
+                    "applicant_name": "",
+                    "sex": "",
+                    "phone": "",
+                    "email": "",
+                    "birthday": "",
+                    "born_place": "",
+                    "living_place": ""
+                },
+                "work_exps": [
+                    {
+                        "exp_type": "internship_or_work",
+                        "title": "",
+                        "organization": "",
+                        "start_date": "",
+                        "end_date": "",
+                        "description": ""
+                    }
+                ],
+                "project_exps": [
+                    {
+                        "project_name": "",
+                        "role": "",
+                        "start_date": "",
+                        "end_date": "",
+                        "description": ""
+                    }
+                ],
+                "awards": [
+                    {
+                        "award_name": "",
+                        "award_date": "",
+                        "description": ""
+                    }
+                ],
+                "self_evaluation": "",
+                "others": []
+            }
+        }
+    },
+    "ocr": {
+        "enabled": true,
+        "api_key": "",
+        "api_url": "https://api.ocr.space/parse/image",
+        "language": "chs",
+        "timeout_seconds": 25
+    }
+}
