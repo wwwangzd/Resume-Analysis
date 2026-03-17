@@ -1,6 +1,8 @@
 import json
 import re
-import urllib.request
+
+from langchain_community.chat_models import ChatTongyi
+from langchain_core.prompts import ChatPromptTemplate
 
 
 def _get_prompt_settings(settings):
@@ -46,38 +48,35 @@ def _normalize_schema(data, output_schema):
 	return form_data
 
 
+def _build_langchain_model(llm_settings):
+	model_name = llm_settings['model']
+	return ChatTongyi(model=model_name) # type: ignore
+
+
 def extract_resume_by_llm(resume_text, settings):
 	llm_settings = settings['llm']
-	api_key = llm_settings['api_key'].strip()
-	api_base = llm_settings['api_base'].rstrip('/')
-	model = llm_settings['model']
-	timeout_seconds = llm_settings['timeout_seconds']
 	system_prompt, user_requirements, output_schema = _get_prompt_settings(settings)
 
-	if not api_key:
-		raise ValueError('llm.api_key is empty in settings.json.')
+	prompt = ChatPromptTemplate.from_messages([
+		('system', '{system_prompt}'),
+		('user', '{user_prompt}')
+	])
+	llm = _build_langchain_model(llm_settings)
+	chain = prompt | llm
 
-	payload = {
-		'model': model,
-		'temperature': 0,
-		'response_format': {'type': 'json_object'},
-		'messages': [
-			{'role': 'system', 'content': system_prompt},
-			{'role': 'user', 'content': _build_user_prompt(resume_text, user_requirements, output_schema)}
-		]
-	}
+	response = chain.invoke({
+		'system_prompt': system_prompt,
+		'user_prompt': _build_user_prompt(resume_text, user_requirements, output_schema)
+	})
+	
+	content = response.content
+	if isinstance(content, list):
+		content = ''.join(
+			part.get('text', '') if isinstance(part, dict) else str(part)
+			for part in content
+		)
+	if not isinstance(content, str):
+		content = str(content)
 
-	req = urllib.request.Request(
-		f'{api_base}/chat/completions',
-		data=json.dumps(payload).encode('utf-8'),
-		method='POST'
-	)
-	req.add_header('Authorization', f'Bearer {api_key}')
-	req.add_header('Content-Type', 'application/json')
-
-	with urllib.request.urlopen(req, timeout=timeout_seconds) as resp:
-		response = json.loads(resp.read().decode('utf-8', errors='ignore'))
-
-	content = response['choices'][0]['message']['content']
 	parsed = _extract_json_object(content)
 	return _normalize_schema(parsed, output_schema)

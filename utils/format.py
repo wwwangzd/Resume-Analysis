@@ -23,7 +23,7 @@ def format_date(data):
     if match:
         year = int(match.group(1))
         month = int(match.group(2))
-        day = int(match.group(3) if match.group(3) else 1)  # TODO: 如果没有日，则默认为 1，日期格式确认
+        day = int(match.group(3) if match.group(3) else 1)
         return datetime(year, month, day).isoformat()
 
     return ''
