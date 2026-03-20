@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+python-multipart
+langchain-community
+langchain-core
+dashscope
+paddlepaddle==2.6.2
+paddleocr==2.10.0
+pypdfium2
+numpy<2

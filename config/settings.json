@@ -59,9 +59,10 @@
     },
     "ocr": {
         "enabled": true,
-        "api_key": "",
-        "api_url": "https://api.ocr.space/parse/image",
-        "language": "chs",
-        "timeout_seconds": 25
+        "lang": "ch",
+        "use_angle_cls": true,
+        "use_gpu": false,
+        "show_log": false,
+        "pdf_render_scale": 2.0
     }
 }
