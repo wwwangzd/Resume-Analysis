@@ -5,7 +5,7 @@ from datetime import datetime
 BIRTH_CORRECT_PATTERN = r"(\d{4})[-./年\s]+(\d{1,2})[-./月\s]*(\d{1,2})?"
 
 
-# 规范时间格式
+# Normalize date strings into a parsable dot-separated format.
 def re_date(date):
     date = date.replace('年', '.').replace('月', '')
     if date[-1:] == '年':
@@ -30,17 +30,17 @@ def format_date(data):
 
 
 def snake_to_camel(snake_str):
-    components = snake_str.split('_')  # 以下划线分割
+    components = snake_str.split('_')  # Split on underscores.
     return components[0] + ''.join(x.title() for x in components[1:])
 
 
 def convert_keys_to_camel_case(input_data):
     if isinstance(input_data, dict):
-        # 如果是字典，递归转换每一个key
+        # Recursively convert each dictionary key.
         return {snake_to_camel(key): convert_keys_to_camel_case(value) for key, value in input_data.items()}
     elif isinstance(input_data, list):
-        # 如果是列表，递归转换列表中的每个元素
+        # Recursively convert each item in the list.
         return [convert_keys_to_camel_case(item) for item in input_data]
     else:
-        # 如果是其他类型，直接返回
+        # Return non-container values unchanged.
         return input_data

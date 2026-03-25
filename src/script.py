@@ -6,12 +6,12 @@ from src import llm_extract
 from utils import format, document
 
 app = FastAPI()
-settings = config.load_settings()
+app_config = config.get_app_config()
 
-# 添加 CORS 中间件
+# Add the CORS middleware.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings['app']['cors_allow_origins'],
+    allow_origins=app_config['cors_allow_origins'],
     allow_methods=['*'],
     allow_headers=['*'],
     allow_credentials=True,
@@ -19,8 +19,8 @@ app.add_middleware(
 
 
 async def analysis_v2(file_bytes):
-    resume_text = await document.get_resume_text(file_bytes, settings)
-    form_data = llm_extract.extract_resume_by_llm(resume_text, settings)
+    resume_text = await document.get_resume_text(file_bytes)
+    form_data = llm_extract.extract_resume_by_llm(resume_text)
     return form_data
 
 
@@ -38,4 +38,4 @@ async def request(file: UploadFile = File(...)):
 if __name__ == '__main__':
     import uvicorn
 
-    uvicorn.run("script:app", host=settings['app']['host'], port=settings['app']['port'])
+    uvicorn.run("script:app", host=app_config['host'], port=app_config['port'])
