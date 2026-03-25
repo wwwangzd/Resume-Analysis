@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi import UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from src import config
+import config
 from src import llm_extract
 from utils import format, document
 

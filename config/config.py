@@ -2,7 +2,8 @@ import json
 from pathlib import Path
 from typing import Any, Dict
 
-DEFAULT_CONFIG_PATH = Path(__file__).resolve().parent.parent / 'config' / 'settings.json'
+
+DEFAULT_CONFIG_PATH = Path(__file__).resolve().parent / 'settings.json'
 
 settings_cache: Dict[str, Any] | None = None
 

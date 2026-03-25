@@ -8,7 +8,7 @@ import numpy as np
 import pypdfium2 as pdfium
 from paddleocr import PaddleOCR
 
-from src import config
+import config
 
 paddleOcrInstance = None
 paddleOcrSignature = None

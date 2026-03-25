@@ -4,7 +4,7 @@ import re
 from langchain_community.chat_models import ChatTongyi
 from langchain_core.prompts import ChatPromptTemplate
 
-from src import config
+import config
 
 
 def get_prompt_settings():
