@@ -7,7 +7,7 @@
         ]
     },
     "llm": {
-        "model": "qwen3.5-flash",
+        "model": "qwen-plus",
         "prompt": {
             "system_prompt": "你是一个简历信息抽取助手。请严格根据输入文本提取结构化信息，输出必须是 JSON。禁止臆造内容：没有信息就返回空字符串、空数组或空对象。",
             "user_requirements": [
@@ -28,7 +28,7 @@
                 },
                 "work_exps": [
                     {
-                        "exp_type": "internship_or_work",
+                        "exp_type": "internship/work",
                         "title": "",
                         "organization": "",
                         "start_date": "",
