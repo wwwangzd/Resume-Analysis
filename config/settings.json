@@ -60,10 +60,10 @@
     "ocr": {
         "enabled": true,
         "lang": "ch",
-        "use_angle_cls": true,
+        "use_angle_cls": false,
         "use_gpu": false,
         "show_log": false,
-        "pdf_render_scale": 2.0
+        "pdf_render_scale": 1.0
     },
     "document": {
         "native_text_enabled": true,
