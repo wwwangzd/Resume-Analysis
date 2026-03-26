@@ -35,3 +35,7 @@ def get_ocr_config() -> Dict[str, Any]:
 
 def get_logging_config() -> Dict[str, Any]:
     return load_settings().get('logging', {})
+
+
+def get_document_config() -> Dict[str, Any]:
+    return load_settings().get('document', {})

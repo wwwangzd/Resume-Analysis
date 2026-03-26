@@ -91,9 +91,60 @@ def validate_pdf(file_bytes: bytes) -> None:
         raise ValueError('Only PDF documents are supported.')
 
 
+def extract_native_pdf_text(file_bytes: bytes) -> tuple[str, int]:
+    native_text_start = start_timer()
+    pdf = pdfium.PdfDocument(io.BytesIO(file_bytes))
+    page_texts = []
+
+    try:
+        for page_index in range(len(pdf)):
+            page = pdf.get_page(page_index)
+            try:
+                text_page = page.get_textpage()
+                try:
+                    page_texts.append(text_page.get_text_bounded())
+                finally:
+                    text_page.close()
+            finally:
+                page.close()
+    finally:
+        pdf.close()
+
+    normalized_text = '\n'.join(normalize_lines('\n'.join(page_texts)))
+    log_stage_timing(
+        logger,
+        'native_pdf_text',
+        native_text_start,
+        pages=len(page_texts),
+        text_length=len(normalized_text),
+    )
+    return normalized_text, len(page_texts)
+
+
+def should_use_native_text(native_text: str, document_settings) -> bool:
+    minimum_chars = document_settings.get('native_text_min_chars', 200)
+    minimum_lines = document_settings.get('native_text_min_lines', 5)
+    normalized_lines = normalize_lines(native_text)
+    return len(native_text) >= minimum_chars and len(normalized_lines) >= minimum_lines
+
+
 def extract_pdf_text(file_bytes: bytes) -> str:
     total_start = start_timer()
     validate_pdf(file_bytes)
+
+    document_settings = config.get_document_config()
+    if document_settings.get('native_text_enabled', True):
+        native_text, native_page_count = extract_native_pdf_text(file_bytes)
+        if should_use_native_text(native_text, document_settings):
+            log_stage_timing(
+                logger,
+                'document_extract_total',
+                total_start,
+                source='native_text',
+                pages=native_page_count,
+                text_length=len(native_text),
+            )
+            return native_text
 
     ocr_settings = config.get_ocr_config()
     if not ocr_settings['enabled']:
@@ -102,7 +153,7 @@ def extract_pdf_text(file_bytes: bytes) -> str:
     ocr_engine = build_ocr_instance(ocr_settings)
     page_images = render_pdf_pages_to_images(file_bytes, ocr_settings['pdf_render_scale'])
     if not page_images:
-        log_stage_timing(logger, 'document_extract_total', total_start, pages=0, text_length=0)
+        log_stage_timing(logger, 'document_extract_total', total_start, source='ocr', pages=0, text_length=0)
         return ''
 
     texts = []
@@ -124,6 +175,7 @@ def extract_pdf_text(file_bytes: bytes) -> str:
         logger,
         'document_extract_total',
         total_start,
+        source='ocr',
         pages=len(page_images),
         text_length=len(normalized_text),
     )

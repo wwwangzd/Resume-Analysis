@@ -65,6 +65,11 @@
         "show_log": false,
         "pdf_render_scale": 2.0
     },
+    "document": {
+        "native_text_enabled": true,
+        "native_text_min_chars": 200,
+        "native_text_min_lines": 5
+    },
     "logging": {
         "enabled": true,
         "level": "INFO",
