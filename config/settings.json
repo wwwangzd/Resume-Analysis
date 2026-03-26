@@ -8,6 +8,14 @@
     },
     "llm": {
         "model": "qwen-flash",
+        "preprocess": {
+            "enabled": true,
+            "remove_noise_lines": true,
+            "dedupe_consecutive_lines": true,
+            "collapse_internal_spaces": true,
+            "max_input_chars": 5000,
+            "preserve_tail_chars": 1200
+        },
         "prompt": {
             "system_prompt": "你是一个简历信息抽取助手。请严格根据输入文本提取结构化信息，输出必须是 JSON。禁止臆造内容：没有信息就返回空字符串、空数组或空对象。",
             "user_requirements": [

@@ -29,6 +29,10 @@ def get_llm_prompt_config() -> Dict[str, Any]:
     return get_llm_config()['prompt']
 
 
+def get_llm_preprocess_config() -> Dict[str, Any]:
+    return get_llm_config().get('preprocess', {})
+
+
 def get_ocr_config() -> Dict[str, Any]:
     return load_settings()['ocr']
 

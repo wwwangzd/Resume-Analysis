@@ -30,6 +30,81 @@ def build_user_prompt(resume_text, user_requirements, output_schema):
     )
 
 
+def is_noise_line(line: str) -> bool:
+    compact_line = line.replace(' ', '')
+    if len(compact_line) < 20:
+        return False
+
+    ascii_chars = sum(1 for char in compact_line if char.isascii())
+    digit_chars = sum(1 for char in compact_line if char.isdigit())
+    alpha_chars = sum(1 for char in compact_line if char.isalpha())
+    cjk_chars = sum(1 for char in compact_line if '\u4e00' <= char <= '\u9fff')
+    ascii_ratio = ascii_chars / max(len(compact_line), 1)
+
+    return ascii_ratio > 0.85 and digit_chars > 0 and alpha_chars > 0 and cjk_chars == 0
+
+
+def normalize_resume_lines(resume_text: str, preprocess_config) -> list[str]:
+    collapse_spaces = preprocess_config.get('collapse_internal_spaces', True)
+    dedupe_lines = preprocess_config.get('dedupe_consecutive_lines', True)
+    remove_noise_lines = preprocess_config.get('remove_noise_lines', True)
+
+    normalized_lines = []
+    previous_line = None
+
+    for raw_line in resume_text.splitlines():
+        line = raw_line.strip()
+        if collapse_spaces:
+            line = re.sub(r'[ \t\u3000]+', ' ', line).strip()
+        if not line:
+            continue
+        if remove_noise_lines and is_noise_line(line):
+            continue
+        if dedupe_lines and line == previous_line:
+            continue
+        normalized_lines.append(line)
+        previous_line = line
+
+    return normalized_lines
+
+
+def truncate_resume_text(resume_text: str, preprocess_config) -> str:
+    max_input_chars = preprocess_config.get('max_input_chars', 5000)
+    preserve_tail_chars = preprocess_config.get('preserve_tail_chars', 1200)
+
+    if max_input_chars <= 0 or len(resume_text) <= max_input_chars:
+        return resume_text
+
+    if preserve_tail_chars <= 0 or preserve_tail_chars >= max_input_chars:
+        return resume_text[:max_input_chars]
+
+    head_chars = max_input_chars - preserve_tail_chars
+    truncated_text = resume_text[:head_chars].rstrip()
+    preserved_tail = resume_text[-preserve_tail_chars:].lstrip()
+    return f'{truncated_text}\n...\n{preserved_tail}'
+
+
+def prepare_resume_text_for_llm(resume_text: str) -> str:
+    preprocess_config = config.get_llm_preprocess_config()
+    if not preprocess_config.get('enabled', True):
+        return resume_text
+
+    preprocess_start = start_timer()
+    normalized_lines = normalize_resume_lines(resume_text, preprocess_config)
+    normalized_text = '\n'.join(normalized_lines)
+    prepared_text = truncate_resume_text(normalized_text, preprocess_config)
+    log_stage_timing(
+        logger,
+        'llm_text_preprocess',
+        preprocess_start,
+        raw_length=len(resume_text),
+        prepared_length=len(prepared_text),
+        removed_chars=len(resume_text) - len(prepared_text),
+        line_count=len(normalized_lines),
+    )
+    return prepared_text
+
+
 def extract_json_object(raw_text):
     try:
         return json.loads(raw_text)
@@ -63,6 +138,7 @@ def extract_resume_by_llm(resume_text):
     total_start = start_timer()
     llm_settings = config.get_llm_config()
     system_prompt, user_requirements, output_schema = get_prompt_settings()
+    prepared_resume_text = prepare_resume_text_for_llm(resume_text)
 
     prompt = ChatPromptTemplate.from_messages([
         ('system', '{system_prompt}'),
@@ -74,14 +150,14 @@ def extract_resume_by_llm(resume_text):
     invoke_start = start_timer()
     response = chain.invoke({
         'system_prompt': system_prompt,
-        'user_prompt': build_user_prompt(resume_text, user_requirements, output_schema)
+        'user_prompt': build_user_prompt(prepared_resume_text, user_requirements, output_schema)
     })
     log_stage_timing(
         logger,
         'llm_invoke',
         invoke_start,
         model=llm_settings['model'],
-        input_length=len(resume_text),
+        input_length=len(prepared_resume_text),
     )
 
     content = response.content
