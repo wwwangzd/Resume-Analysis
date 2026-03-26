@@ -31,3 +31,7 @@ def get_llm_prompt_config() -> Dict[str, Any]:
 
 def get_ocr_config() -> Dict[str, Any]:
     return load_settings()['ocr']
+
+
+def get_logging_config() -> Dict[str, Any]:
+    return load_settings().get('logging', {})

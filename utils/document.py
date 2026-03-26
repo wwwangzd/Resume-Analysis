@@ -9,9 +9,11 @@ import pypdfium2 as pdfium
 from paddleocr import PaddleOCR
 
 import config
+from config.logger import get_logger, log_stage_timing, start_timer
 
 paddleOcrInstance = None
 paddleOcrSignature = None
+logger = get_logger('resume_analysis.document')
 
 
 def normalize_lines(text: str) -> List[str]:
@@ -21,6 +23,7 @@ def normalize_lines(text: str) -> List[str]:
 
 
 def build_ocr_instance(ocr_settings):
+    build_start = start_timer()
     global paddleOcrInstance
     global paddleOcrSignature
 
@@ -32,6 +35,7 @@ def build_ocr_instance(ocr_settings):
     )
 
     if paddleOcrInstance is not None and paddleOcrSignature == signature:
+        log_stage_timing(logger, 'ocr_instance_reuse', build_start, reused=True)
         return paddleOcrInstance
 
     paddleOcrInstance = PaddleOCR(
@@ -41,10 +45,12 @@ def build_ocr_instance(ocr_settings):
         show_log=ocr_settings['show_log'],
     )
     paddleOcrSignature = signature
+    log_stage_timing(logger, 'ocr_instance_init', build_start, reused=False)
     return paddleOcrInstance
 
 
 def render_pdf_pages_to_images(file_bytes: bytes, render_scale: float) -> List[np.ndarray]:
+    render_start = start_timer()
     pdf = pdfium.PdfDocument(io.BytesIO(file_bytes))
     images = []
     try:
@@ -59,6 +65,7 @@ def render_pdf_pages_to_images(file_bytes: bytes, render_scale: float) -> List[n
                 page.close()
     finally:
         pdf.close()
+    log_stage_timing(logger, 'pdf_render', render_start, pages=len(images), render_scale=render_scale)
     return images
 
 
@@ -85,6 +92,7 @@ def validate_pdf(file_bytes: bytes) -> None:
 
 
 def extract_pdf_text(file_bytes: bytes) -> str:
+    total_start = start_timer()
     validate_pdf(file_bytes)
 
     ocr_settings = config.get_ocr_config()
@@ -94,14 +102,32 @@ def extract_pdf_text(file_bytes: bytes) -> str:
     ocr_engine = build_ocr_instance(ocr_settings)
     page_images = render_pdf_pages_to_images(file_bytes, ocr_settings['pdf_render_scale'])
     if not page_images:
+        log_stage_timing(logger, 'document_extract_total', total_start, pages=0, text_length=0)
         return ''
 
     texts = []
+    ocr_start = start_timer()
     for page_image in page_images:
         page_result = ocr_engine.ocr(page_image, cls=ocr_settings['use_angle_cls'])
         texts.extend(extract_paddle_text(page_result))
+    log_stage_timing(
+        logger,
+        'ocr_inference',
+        ocr_start,
+        pages=len(page_images),
+        extracted_lines=len(texts),
+        use_angle_cls=ocr_settings['use_angle_cls'],
+    )
 
-    return '\n'.join(normalize_lines('\n'.join(texts)))
+    normalized_text = '\n'.join(normalize_lines('\n'.join(texts)))
+    log_stage_timing(
+        logger,
+        'document_extract_total',
+        total_start,
+        pages=len(page_images),
+        text_length=len(normalized_text),
+    )
+    return normalized_text
 
 
 async def get_resume_text(file_bytes: bytes) -> str:

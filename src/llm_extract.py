@@ -5,6 +5,10 @@ from langchain_community.chat_models import ChatTongyi
 from langchain_core.prompts import ChatPromptTemplate
 
 import config
+from config.logger import get_logger, log_stage_timing, start_timer
+
+
+logger = get_logger('resume_analysis.llm')
 
 
 def get_prompt_settings():
@@ -56,6 +60,7 @@ def build_langchain_model(llm_settings):
 
 
 def extract_resume_by_llm(resume_text):
+    total_start = start_timer()
     llm_settings = config.get_llm_config()
     system_prompt, user_requirements, output_schema = get_prompt_settings()
 
@@ -66,10 +71,18 @@ def extract_resume_by_llm(resume_text):
     llm = build_langchain_model(llm_settings)
     chain = prompt | llm
 
+    invoke_start = start_timer()
     response = chain.invoke({
         'system_prompt': system_prompt,
         'user_prompt': build_user_prompt(resume_text, user_requirements, output_schema)
     })
+    log_stage_timing(
+        logger,
+        'llm_invoke',
+        invoke_start,
+        model=llm_settings['model'],
+        input_length=len(resume_text),
+    )
 
     content = response.content
     if isinstance(content, list):
@@ -81,4 +94,12 @@ def extract_resume_by_llm(resume_text):
         content = str(content)
 
     parsed = extract_json_object(content)
-    return normalize_schema(parsed, output_schema)
+    normalized_data = normalize_schema(parsed, output_schema)
+    log_stage_timing(
+        logger,
+        'llm_extract_total',
+        total_start,
+        model=llm_settings['model'],
+        output_keys=len(normalized_data.keys()) if isinstance(normalized_data, dict) else 0,
+    )
+    return normalized_data

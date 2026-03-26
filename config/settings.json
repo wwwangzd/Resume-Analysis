@@ -7,7 +7,7 @@
         ]
     },
     "llm": {
-        "model": "qwen-plus",
+        "model": "qwen-flash",
         "prompt": {
             "system_prompt": "你是一个简历信息抽取助手。请严格根据输入文本提取结构化信息，输出必须是 JSON。禁止臆造内容：没有信息就返回空字符串、空数组或空对象。",
             "user_requirements": [
@@ -64,5 +64,12 @@
         "use_gpu": false,
         "show_log": false,
         "pdf_render_scale": 2.0
+    },
+    "logging": {
+        "enabled": true,
+        "level": "INFO",
+        "timing_enabled": true,
+        "format": "%(asctime)s %(levelname)s [%(name)s] %(message)s",
+        "date_format": "%Y-%m-%d %H:%M:%S"
     }
 }
