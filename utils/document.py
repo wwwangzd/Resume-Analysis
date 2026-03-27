@@ -4,15 +4,15 @@ import io
 from pathlib import Path
 from typing import List
 
+import config
 import numpy as np
 import pypdfium2 as pdfium
 from paddleocr import PaddleOCR
 
-import config
 from config.logger import get_logger, log_stage_timing, start_timer
 
-paddleOcrInstance = None
-paddleOcrSignature = None
+paddle_ocr_instance = None
+paddle_ocr_signature = None
 logger = get_logger('resume_analysis.document')
 
 
@@ -24,8 +24,8 @@ def normalize_lines(text: str) -> List[str]:
 
 def build_ocr_instance(ocr_settings):
     build_start = start_timer()
-    global paddleOcrInstance
-    global paddleOcrSignature
+    global paddle_ocr_instance
+    global paddle_ocr_signature
 
     signature = (
         ocr_settings['lang'],
@@ -34,19 +34,19 @@ def build_ocr_instance(ocr_settings):
         ocr_settings['show_log'],
     )
 
-    if paddleOcrInstance is not None and paddleOcrSignature == signature:
+    if paddle_ocr_instance is not None and paddle_ocr_signature == signature:
         log_stage_timing(logger, 'ocr_instance_reuse', build_start, reused=True)
-        return paddleOcrInstance
+        return paddle_ocr_instance
 
-    paddleOcrInstance = PaddleOCR(
+    paddle_ocr_instance = PaddleOCR(
         lang=ocr_settings['lang'],
         use_angle_cls=ocr_settings['use_angle_cls'],
         use_gpu=ocr_settings['use_gpu'],
         show_log=ocr_settings['show_log'],
     )
-    paddleOcrSignature = signature
+    paddle_ocr_signature = signature
     log_stage_timing(logger, 'ocr_instance_init', build_start, reused=False)
-    return paddleOcrInstance
+    return paddle_ocr_instance
 
 
 def render_pdf_pages_to_images(file_bytes: bytes, render_scale: float) -> List[np.ndarray]:

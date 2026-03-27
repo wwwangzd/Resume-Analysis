@@ -2,17 +2,17 @@ import json
 import re
 from typing import Any
 
+import config
 from langchain_community.chat_models import ChatTongyi
 from langchain_core.prompts import ChatPromptTemplate
 
-import config
 from config.logger import get_logger, log_stage_timing, start_timer
 
 
 logger = get_logger('resume_analysis.llm')
-llmInstanceCache: dict[str, Any] = {}
-promptTemplateCache: ChatPromptTemplate | None = None
-chainCache: dict[str, Any] = {}
+llm_instance_cache: dict[str, Any] = {}
+prompt_template_cache: ChatPromptTemplate | None = None
+chain_cache: dict[str, Any] = {}
 
 
 def get_prompt_settings():
@@ -32,6 +32,59 @@ def build_user_prompt(resume_text, user_requirements, output_schema):
         f'JSON 模板:\n{json.dumps(output_schema, ensure_ascii=False)}\n\n'
         f'简历文本:\n{resume_text}'
     )
+
+
+def build_langchain_model(llm_settings):
+    model_name = llm_settings['model']
+    return ChatTongyi(model=model_name)  # type: ignore
+
+
+def get_llm_cache_key(llm_settings) -> str:
+    return json.dumps(llm_settings, ensure_ascii=False, sort_keys=True)
+
+
+def get_or_create_prompt_template() -> ChatPromptTemplate:
+    global prompt_template_cache
+
+    if prompt_template_cache is None:
+        prompt_template_cache = ChatPromptTemplate.from_messages([
+            ('system', '{system_prompt}'),
+            ('user', '{user_prompt}'),
+        ])
+    return prompt_template_cache
+
+
+def get_or_create_llm_instance(llm_settings):
+    cache_key = get_llm_cache_key(llm_settings)
+    cached_instance = llm_instance_cache.get(cache_key)
+    if cached_instance is not None:
+        return cached_instance, True
+
+    llm_instance = build_langchain_model(llm_settings)
+    llm_instance_cache[cache_key] = llm_instance
+    return llm_instance, False
+
+
+def get_or_create_llm_chain(llm_settings):
+    cache_start = start_timer()
+    cache_key = get_llm_cache_key(llm_settings)
+    cached_chain = chain_cache.get(cache_key)
+    if cached_chain is not None:
+        log_stage_timing(logger, 'llm_chain_cache', cache_start, cache_hit=True)
+        return cached_chain
+
+    prompt_template = get_or_create_prompt_template()
+    llm_instance, llm_cache_hit = get_or_create_llm_instance(llm_settings)
+    llm_chain = prompt_template | llm_instance
+    chain_cache[cache_key] = llm_chain
+    log_stage_timing(
+        logger,
+        'llm_chain_cache',
+        cache_start,
+        cache_hit=False,
+        llm_cache_hit=llm_cache_hit,
+    )
+    return llm_chain
 
 
 def is_noise_line(line: str) -> bool:
@@ -126,64 +179,11 @@ def normalize_schema(data, output_schema):
     if not isinstance(data, dict):
         return form_data
 
-    for key in form_data.keys():
+    for key in form_data:
         if key in data:
             form_data[key] = data[key]
 
     return form_data
-
-
-def build_langchain_model(llm_settings):
-    model_name = llm_settings['model']
-    return ChatTongyi(model=model_name)  # type: ignore
-
-
-def get_llm_cache_key(llm_settings) -> str:
-    return json.dumps(llm_settings, ensure_ascii=False, sort_keys=True)
-
-
-def get_or_create_prompt_template() -> ChatPromptTemplate:
-    global promptTemplateCache
-
-    if promptTemplateCache is None:
-        promptTemplateCache = ChatPromptTemplate.from_messages([
-            ('system', '{system_prompt}'),
-            ('user', '{user_prompt}')
-        ])
-    return promptTemplateCache
-
-
-def get_or_create_llm_instance(llm_settings):
-    cache_key = get_llm_cache_key(llm_settings)
-    cached_instance = llmInstanceCache.get(cache_key)
-    if cached_instance is not None:
-        return cached_instance, True
-
-    llm_instance = build_langchain_model(llm_settings)
-    llmInstanceCache[cache_key] = llm_instance
-    return llm_instance, False
-
-
-def get_or_create_llm_chain(llm_settings):
-    cache_start = start_timer()
-    cache_key = get_llm_cache_key(llm_settings)
-    cached_chain = chainCache.get(cache_key)
-    if cached_chain is not None:
-        log_stage_timing(logger, 'llm_chain_cache', cache_start, cache_hit=True)
-        return cached_chain
-
-    prompt_template = get_or_create_prompt_template()
-    llm_instance, llm_cache_hit = get_or_create_llm_instance(llm_settings)
-    llm_chain = prompt_template | llm_instance
-    chainCache[cache_key] = llm_chain
-    log_stage_timing(
-        logger,
-        'llm_chain_cache',
-        cache_start,
-        cache_hit=False,
-        llm_cache_hit=llm_cache_hit,
-    )
-    return llm_chain
 
 
 def extract_resume_by_llm(resume_text):
@@ -194,10 +194,12 @@ def extract_resume_by_llm(resume_text):
     chain = get_or_create_llm_chain(llm_settings)
 
     invoke_start = start_timer()
-    response = chain.invoke({
-        'system_prompt': system_prompt,
-        'user_prompt': build_user_prompt(prepared_resume_text, user_requirements, output_schema)
-    })
+    response = chain.invoke(
+        {
+            'system_prompt': system_prompt,
+            'user_prompt': build_user_prompt(prepared_resume_text, user_requirements, output_schema),
+        }
+    )
     log_stage_timing(
         logger,
         'llm_invoke',

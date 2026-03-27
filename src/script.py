@@ -1,10 +1,11 @@
-from fastapi import FastAPI
-from fastapi import UploadFile, File, HTTPException
+import uvicorn
+from fastapi import File, FastAPI, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+
 import config
 from config.logger import configure_logging, get_logger, log_stage_timing, start_timer
 from src import llm_extract
-from utils import format, document
+from utils import document, format
 
 configure_logging()
 
@@ -50,7 +51,7 @@ async def request(file: UploadFile = File(...)):
         output_dict = format.convert_keys_to_camel_case(form_data)
         log_stage_timing(logger, 'response_format', format_start, top_level_keys=len(output_dict))
         log_stage_timing(logger, 'request_total', request_start, filename=file.filename, success=True)
-        return {"status": "success", "form_data": output_dict}
+        return {'status': 'success', 'form_data': output_dict}
     except Exception as e:
         log_stage_timing(logger, 'request_total', request_start, filename=file.filename, success=False)
         logger.exception('Resume analysis request failed filename=%s', file.filename)
@@ -58,6 +59,4 @@ async def request(file: UploadFile = File(...)):
 
 
 if __name__ == '__main__':
-    import uvicorn
-
-    uvicorn.run("src.script:app", host=app_config['host'], port=app_config['port'])
+    uvicorn.run('src.script:app', host=app_config['host'], port=app_config['port'])

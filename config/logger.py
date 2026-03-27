@@ -5,19 +5,19 @@ from typing import Any
 from .manager import get_logging_config
 
 
-loggingConfigured = False
+logging_configured = False
 
 
 def configure_logging(force: bool = False) -> None:
-    global loggingConfigured
+    global logging_configured
 
-    if loggingConfigured and not force:
+    if logging_configured and not force:
         return
 
     logging_config = get_logging_config()
     if not logging_config.get('enabled', True):
         logging.disable(logging.CRITICAL)
-        loggingConfigured = True
+        logging_configured = True
         return
 
     logging.disable(logging.NOTSET)
@@ -33,7 +33,7 @@ def configure_logging(force: bool = False) -> None:
     root_logger = logging.getLogger()
     root_logger.handlers.clear()
     logging.basicConfig(level=log_level, format=log_format, datefmt=date_format)
-    loggingConfigured = True
+    logging_configured = True
 
 
 def get_logger(name: str) -> logging.Logger:
@@ -42,7 +42,8 @@ def get_logger(name: str) -> logging.Logger:
 
 
 def is_timing_logging_enabled() -> bool:
-    return get_logging_config().get('enabled', True) and get_logging_config().get('timing_enabled', True)
+    logging_config = get_logging_config()
+    return logging_config.get('enabled', True) and logging_config.get('timing_enabled', True)
 
 
 def start_timer() -> float:

@@ -37,10 +37,14 @@ def snake_to_camel(snake_str):
 def convert_keys_to_camel_case(input_data):
     if isinstance(input_data, dict):
         # Recursively convert each dictionary key.
-        return {snake_to_camel(key): convert_keys_to_camel_case(value) for key, value in input_data.items()}
-    elif isinstance(input_data, list):
+        return {
+            snake_to_camel(key): convert_keys_to_camel_case(value)
+            for key, value in input_data.items()
+        }
+
+    if isinstance(input_data, list):
         # Recursively convert each item in the list.
         return [convert_keys_to_camel_case(item) for item in input_data]
-    else:
-        # Return non-container values unchanged.
-        return input_data
+
+    # Return non-container values unchanged.
+    return input_data
