@@ -5,6 +5,5 @@
 .codex
 *.pyc
 
-models
-train
-test
+test/*
+AGENTS.md
