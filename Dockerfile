@@ -26,4 +26,4 @@ COPY utils ./utils
 
 EXPOSE 8999
 
-CMD ["uvicorn", "src.script:app", "--host", "0.0.0.0", "--port", "8999"]
+CMD ["python", "src/script.py"]

@@ -1,5 +1,7 @@
+import asyncio
 import json
 import re
+from threading import Lock
 from typing import Any
 
 import config
@@ -8,11 +10,15 @@ from langchain_core.prompts import ChatPromptTemplate
 
 from config.logger import get_logger, log_stage_timing, start_timer
 
-
 logger = get_logger('resume_analysis.llm')
+
 llm_instance_cache: dict[str, Any] = {}
 prompt_template_cache: ChatPromptTemplate | None = None
 chain_cache: dict[str, Any] = {}
+
+llm_instance_lock = Lock()
+prompt_template_lock = Lock()
+chain_cache_lock = Lock()
 
 
 def get_prompt_settings():
@@ -46,22 +52,32 @@ def get_llm_cache_key(llm_settings) -> str:
 def get_or_create_prompt_template() -> ChatPromptTemplate:
     global prompt_template_cache
 
-    if prompt_template_cache is None:
-        prompt_template_cache = ChatPromptTemplate.from_messages([
-            ('system', '{system_prompt}'),
-            ('user', '{user_prompt}'),
-        ])
+    if prompt_template_cache is not None:
+        return prompt_template_cache
+
+    with prompt_template_lock:
+        if prompt_template_cache is None:
+            prompt_template_cache = ChatPromptTemplate.from_messages([
+                ('system', '{system_prompt}'),
+                ('user', '{user_prompt}'),
+            ])
     return prompt_template_cache
 
 
 def get_or_create_llm_instance(llm_settings):
     cache_key = get_llm_cache_key(llm_settings)
     cached_instance = llm_instance_cache.get(cache_key)
+
     if cached_instance is not None:
         return cached_instance, True
 
-    llm_instance = build_langchain_model(llm_settings)
-    llm_instance_cache[cache_key] = llm_instance
+    with llm_instance_lock:
+        cached_instance = llm_instance_cache.get(cache_key)
+        if cached_instance is not None:
+            return cached_instance, True
+
+        llm_instance = build_langchain_model(llm_settings)
+        llm_instance_cache[cache_key] = llm_instance
     return llm_instance, False
 
 
@@ -69,14 +85,21 @@ def get_or_create_llm_chain(llm_settings):
     cache_start = start_timer()
     cache_key = get_llm_cache_key(llm_settings)
     cached_chain = chain_cache.get(cache_key)
+    
     if cached_chain is not None:
         log_stage_timing(logger, 'llm_chain_cache', cache_start, cache_hit=True)
         return cached_chain
 
-    prompt_template = get_or_create_prompt_template()
-    llm_instance, llm_cache_hit = get_or_create_llm_instance(llm_settings)
-    llm_chain = prompt_template | llm_instance
-    chain_cache[cache_key] = llm_chain
+    with chain_cache_lock:
+        cached_chain = chain_cache.get(cache_key)
+        if cached_chain is not None:
+            log_stage_timing(logger, 'llm_chain_cache', cache_start, cache_hit=True)
+            return cached_chain
+
+        prompt_template = get_or_create_prompt_template()
+        llm_instance, llm_cache_hit = get_or_create_llm_instance(llm_settings)
+        llm_chain = prompt_template | llm_instance
+        chain_cache[cache_key] = llm_chain
     log_stage_timing(
         logger,
         'llm_chain_cache',
@@ -227,3 +250,7 @@ def extract_resume_by_llm(resume_text):
         output_keys=len(normalized_data.keys()) if isinstance(normalized_data, dict) else 0,
     )
     return normalized_data
+
+
+async def extract_resume_by_llm_async(resume_text):
+    return await asyncio.to_thread(extract_resume_by_llm, resume_text)

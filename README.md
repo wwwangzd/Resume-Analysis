@@ -139,6 +139,8 @@ export DASHSCOPE_API_KEY=your_api_key
 python src/script.py
 ```
 
+默认使用 `config/settings.json` 中配置的 `workers = 2` 启动。
+
 服务默认监听：
 
 ```text
@@ -182,6 +184,7 @@ curl -X POST "http://127.0.0.1:8999/analysis" \
 主要配置文件为 `config/settings.json`，当前支持的主要配置包括：
 
 - 服务监听地址与端口
+- `uvicorn` worker 数
 - CORS 配置
 - LLM 模型、提示词和输出 schema
 - LLM 输入预处理规则

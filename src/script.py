@@ -29,7 +29,7 @@ async def analysis_v2(file_bytes):
     log_stage_timing(logger, 'document_stage', analysis_start, text_length=len(resume_text))
 
     llm_start = start_timer()
-    form_data = llm_extract.extract_resume_by_llm(resume_text)
+    form_data = await llm_extract.extract_resume_by_llm_async(resume_text)
     log_stage_timing(logger, 'llm_stage', llm_start, text_length=len(resume_text))
     log_stage_timing(logger, 'analysis_total', analysis_start, text_length=len(resume_text))
     return form_data
@@ -59,4 +59,9 @@ async def request(file: UploadFile = File(...)):
 
 
 if __name__ == '__main__':
-    uvicorn.run('src.script:app', host=app_config['host'], port=app_config['port'])
+    uvicorn.run(
+        'src.script:app',
+        host=app_config['host'],
+        port=app_config['port'],
+        workers=app_config.get('workers', 2),
+    )
