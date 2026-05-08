@@ -9,6 +9,7 @@
 - 输出固定为六个模块：基础信息、实习/工作经历、项目经历、获奖信息、自我评价、其他。
 - 默认 OCR 参数为 `pdf_render_scale = 1.0`、`use_angle_cls = false`、`use_gpu = false`。
 - LLM 输入预处理默认开启噪声过滤、连续重复行去重、空白规范化和保守裁剪。
+- `README.md` 与 `README.en.md` 需要保持同步更新。
 
 ## 已完成优化
 

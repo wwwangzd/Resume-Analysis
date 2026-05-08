@@ -136,8 +136,10 @@ For this sample, the service takes the native PDF text path, so document extract
 ```bash
 pip install -r requirements.txt
 export DASHSCOPE_API_KEY=your_api_key
-python src/script.py
+python -m src.script
 ```
+
+By default, the service starts with `workers = 2` from `config/settings.json`.
 
 Default service address:
 
@@ -182,6 +184,7 @@ curl -X POST "http://127.0.0.1:8999/analysis" \
 The main configuration file is `config/settings.json`. Key configurable items include:
 
 - Host and port
+- `uvicorn` worker count
 - CORS settings
 - LLM model, prompts, and output schema
 - LLM input preprocessing rules
