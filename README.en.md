@@ -136,7 +136,7 @@ For this sample, the service takes the native PDF text path, so document extract
 ```bash
 pip install -r requirements.txt
 export DASHSCOPE_API_KEY=your_api_key
-python -m src.script
+python script.py
 ```
 
 By default, the service starts with `workers = 2` from `config/settings.json`.

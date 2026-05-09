@@ -13,7 +13,6 @@ app = FastAPI()
 app_config = config.get_app_config()
 logger = get_logger('resume_analysis.api')
 
-# Add the CORS middleware.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=app_config['cors_allow_origins'],
@@ -58,10 +57,14 @@ async def request(file: UploadFile = File(...)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-if __name__ == '__main__':
+def main() -> None:
     uvicorn.run(
-        'src.script:app',
+        'script:app',
         host=app_config['host'],
         port=app_config['port'],
         workers=app_config.get('workers', 2),
     )
+
+
+if __name__ == '__main__':
+    main()

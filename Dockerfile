@@ -26,4 +26,4 @@ COPY utils ./utils
 
 EXPOSE 8999
 
-CMD ["python", "-m", "src.script"]
+CMD ["python", "script.py"]

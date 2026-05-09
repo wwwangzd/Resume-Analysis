@@ -136,7 +136,7 @@ flowchart LR
 ```bash
 pip install -r requirements.txt
 export DASHSCOPE_API_KEY=your_api_key
-python -m src.script
+python script.py
 ```
 
 默认使用 `config/settings.json` 中配置的 `workers = 2` 启动。
